@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- mssql_v1alpha1_database.yaml
+- mssql_v1alpha1_cluster.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
