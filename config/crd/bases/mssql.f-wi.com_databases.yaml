@@ -39,7 +39,9 @@ spec:
           spec:
             description: DatabaseSpec defines the desired state of Database
             properties:
-              foo:
+              clusterName:
+                type: string
+              name:
                 description: Foo is an example field of Database. Edit database_types.go
                   to remove/update
                 type: string

@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	mssqlv1alpha1 "github.com/falkwinkler/mssql-operator/api/v1alpha1"
+	variables "github.com/falkwinkler/mssql-operator/variablesdatabasecluster"
 )
 
 // ClusterReconciler reconciles a Cluster object
@@ -46,17 +47,44 @@ type ClusterReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
-func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+func (reconciler *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	// TODO(user): your logic here
+	log := log.FromContext(ctx)
+
+	log.Info("Reconcile started for DatabaseCluster CRD")
+
+	databasecluster := &mssqlv1alpha1.Cluster{}
+	err := reconciler.Get(ctx, req.NamespacedName, databasecluster)
+
+	variables.SetGlobalVariables(databasecluster.Name, databasecluster.Spec.Image)
+	variables.PrintVariables(databasecluster.Name, databasecluster.Namespace, databasecluster.Spec.AmountPods)
+
+	_, err = reconciler.reconcileService(ctx, databasecluster)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// _, err = reconciler.reconcileClusterRole(ctx, databasecluster)
+	// if err != nil {
+	// 	return ctrl.Result{}, err
+	// }
+
+	// _, err = reconciler.reconcileClusterRoleBinding(ctx, databasecluster)
+	// if err != nil {
+	// 	return ctrl.Result{}, err
+	// }
+
+	_, err = reconciler.reconcileStatefulSet(ctx, databasecluster)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (reconciler *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mssqlv1alpha1.Cluster{}).
-		Complete(r)
+		Complete(reconciler)
 }

@@ -9,4 +9,5 @@ metadata:
     app.kubernetes.io/created-by: mssql-operator
   name: database-sample
 spec:
-  # TODO(user): Add fields here
+  name: testdb1
+  clusterName: cluster-sample

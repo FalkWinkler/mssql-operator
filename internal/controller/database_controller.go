@@ -18,7 +18,10 @@ package controller
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 
+	_ "github.com/microsoft/go-mssqldb"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,10 +49,68 @@ type DatabaseReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
-func (r *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+func (reconciler *DatabaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	log.Info("Reconcile started for Database CRD")
+
+	database := &mssqlv1alpha1.Database{}
+
+	err := reconciler.Get(ctx, req.NamespacedName, database)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var databaseCluster mssqlv1alpha1.Cluster
+
+	err = reconciler.Get(ctx, client.ObjectKey{
+		Namespace: req.Namespace,
+		Name:      database.Spec.ClusterName,
+	}, &databaseCluster)
+
+	if err != nil {
+		log.Info("Cluster Keyobject not found")
+		return ctrl.Result{}, err
+	}
+
+	port := 1433 //databaseCluster.Spec.Port
+	server := databaseCluster.GetServiceName()
+	user := "sa"
+	password := "admin@123"
+
+	connString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;InitialCatalog=master", server, user, password, port)
+
+	log.Info("Open Database with ConnectionString " + connString)
+
+	conn, err := sql.Open("mssql", connString)
+	if err != nil {
+		log.Error(err, "Open connection failed:")
+	}
+	defer conn.Close()
+
+	statement := fmt.Sprintf("SELECT COUNT(*) FROM SYS.DATABASES WHERE NAME = %s", database.Spec.Name)
+	result, err := conn.Exec(statement)
+	if err != nil {
+		log.Error(err, "Prepare failed:")
+	}
+
+	rowCount, err := result.RowsAffected()
+
+	if rowCount == 0 {
+		log.Info(fmt.Sprintf("Database %s (%s) was not found!", database.Spec.Name, database.GetName()))
+
+		statement := "CREATE DATABASE " + database.Spec.Name
+		_, err := conn.Exec(statement)
+
+		if err != nil {
+			log.Error(err, "create database failed:")
+		}
+
+		log.Info("Database " + database.Spec.Name + " succeefully created!")
+	}
+
+	log.Info("bye\n")
 
 	return ctrl.Result{}, nil
 }

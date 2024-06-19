@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,11 +27,9 @@ import (
 
 // ClusterSpec defines the desired state of Cluster
 type ClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of Cluster. Edit cluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	AmountPods int32  `json:"amountPods"`
+	Image      string `json:"image,omitempty"`
+	Port       int32  `json:"port,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster
@@ -61,4 +61,8 @@ type ClusterList struct {
 
 func init() {
 	SchemeBuilder.Register(&Cluster{}, &ClusterList{})
+}
+
+func (cluster *Cluster) GetServiceName() string {
+	return fmt.Sprintf("%v-service.%v", cluster.Name, cluster.Namespace)
 }

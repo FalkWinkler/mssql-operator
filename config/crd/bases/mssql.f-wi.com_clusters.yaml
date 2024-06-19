@@ -39,10 +39,16 @@ spec:
           spec:
             description: ClusterSpec defines the desired state of Cluster
             properties:
-              foo:
-                description: Foo is an example field of Cluster. Edit cluster_types.go
-                  to remove/update
+              amountPods:
+                format: int32
+                type: integer
+              image:
                 type: string
+              port:
+                format: int32
+                type: integer
+            required:
+            - amountPods
             type: object
           status:
             description: ClusterStatus defines the observed state of Cluster
